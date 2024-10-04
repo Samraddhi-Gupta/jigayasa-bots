@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot Interface</title>
+    <link rel="stylesheet" href="css/chatbot-style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>AI Chatbot</h1>
+
+      <!-- Intent Classification Section -->
+      <form id="chatForm">
+        <label for="query">Ask a question:</label><br />
+        <input
+          type="text"
+          id="query"
+          name="query"
+          placeholder="Type your query..."
+        /><br /><br />
+        <button type="submit">Submit</button>
+      </form>
+
+      <div id="intentResult"></div>
+
+      <!-- Section for follow-up questions -->
+      <div id="followUpSection" style="display: none">
+        <h2>Follow-up Question:</h2>
+        <form id="followUpForm">
+          <textarea
+            id="followUpQuery"
+            rows="3"
+            placeholder="Ask follow-up questions..."
+          ></textarea
+          ><br /><br />
+          <button type="submit">Submit Follow-up</button>
+        </form>
+        <div id="followUpResult"></div>
+      </div>
+
+      <!-- PDF Upload Section -->
+      <h2>Upload PDF for Processing</h2>
+      <form id="pdfForm" enctype="multipart/form-data">
+        <input
+          type="file"
+          id="pdfFile"
+          name="pdfFile"
+          accept="application/pdf"
+        /><br /><br />
+        <button type="submit">Upload PDF</button>
+      </form>
+
+      <div id="pdfResult"></div>
+
+      <script>
+        // Handle query submission for intent classification
+        document
+          .getElementById("chatForm")
+          .addEventListener("submit", function (event) {
+            event.preventDefault();
+            let query = document.getElementById("query").value;
+
+            // Fetching intent classification result from the backend
+            fetch("/classify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query: query }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                document.getElementById(
+                  "intentResult"
+                ).innerHTML = `<p><strong>Detected Intent:</strong> ${data.intent}</p>`;
+
+                // Display the follow-up section
+                document.getElementById("followUpSection").style.display =
+                  "block";
+              });
+          });
+
+        // Handle follow-up question submission
+        document
+          .getElementById("followUpForm")
+          .addEventListener("submit", function (event) {
+            event.preventDefault();
+            let followUpQuery = document.getElementById("followUpQuery").value;
+
+            // Fetching intent classification result for the follow-up question
+            fetch("/classify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query: followUpQuery }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                document.getElementById(
+                  "followUpResult"
+                ).innerHTML = `<p><strong>Follow-up Detected Intent:</strong> ${data.intent}</p>`;
+              });
+          });
+
+        // Handle PDF upload and processing
+        document
+          .getElementById("pdfForm")
+          .addEventListener("submit", function (event) {
+            event.preventDefault();
+            let formData = new FormData();
+            formData.append("pdfFile", document.getElementById("pdfFile").files[0]);
+
+            // Fetching the PDF summary and keyword extraction result from the backend
+            fetch("/process_pdf", {
+              method: "POST",
+              body: formData,
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.error) {
+                  document.getElementById(
+                    "pdfResult"
+                  ).innerHTML = `<p><strong>Error:</strong> ${data.error}</p>`;
+                } else {
+                  document.getElementById("pdfResult").innerHTML = `
+                      <h3>Summary:</h3><p>${data.summary}</p>
+                      <h3>Keywords:</h3><p>${data.keywords.join(", ")}</p>
+                  `;
+                }
+              })
+              .catch((error) => {
+                document.getElementById(
+                  "pdfResult"
+                ).innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+                console.error("Error processing PDF:", error);
+              });
+          });
+      </script>
+    </div>
+  </body>
+</html>
